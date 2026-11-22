@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await executePayment(creds, paymentId)
-    if (!result.completed || (result.amount !== undefined && result.amount + 0.001 < order.amount)) {
+    // Treat a missing amount as a failure: if bKash doesn't report what was paid we cannot verify it.
+    if (!result.completed || result.amount === undefined || result.amount + 0.001 < order.amount) {
       return back("?payment=failed")
     }
     await placeOrder(order._id, ["pending_payment"], {
