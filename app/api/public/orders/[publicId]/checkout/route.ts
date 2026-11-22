@@ -115,10 +115,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ pub
   if (body.method === "cash") {
     const fields = cashFields(shop)
     const name = fields.name ? (body.customer?.name ?? "") : ""
-    const phone = fields.phone ? normalizeBdPhone(body.customer?.phone ?? "") : ""
+    // normalizeBdPhone returns string | null. Use ?? (nullish coalescing) so that null is
+    // converted to undefined rather than being stored in the customer sub-document.
+    const phone = fields.phone ? normalizeBdPhone(body.customer?.phone ?? "") : null
     if (fields.name && name.length < 2) return jsonError("ক্যাশে দিতে আপনার নাম লিখুন")
     if (fields.phone && !phone) return jsonError("সঠিক মোবাইল নম্বর লিখুন (যেমন ০১৭১২৩৪৫৬৭৮)")
-    order.set({ customer: { name: name || undefined, phone: phone || undefined } })
+    order.set({ customer: { name: name || undefined, phone: phone ?? undefined } })
     await Promise.all([order.save(), ...jobs.map((job) => job.save())])
     await placeOrder(order._id, ["draft", "pending_payment"])
     return NextResponse.json({ redirectUrl: statusPage })
