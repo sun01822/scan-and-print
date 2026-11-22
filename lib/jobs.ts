@@ -193,7 +193,9 @@ export async function placeOrder(orderId: Id, from: ("draft" | "pending_payment"
   )
   if (!order) return null
   const jobs = await PrintJob.find({ orderId: order._id, status: { $in: ["draft", "pending_payment"] } }).sort({ createdAt: 1 })
-  for (const job of jobs) await queueJob(job._id, ["draft", "pending_payment"])
+  // Queue all jobs in parallel: each targets a different document so the operations are independent.
+  // Sequential awaits added ~200–400 ms per file for multi-file orders on a cloud database.
+  await Promise.all(jobs.map((job) => queueJob(job._id, ["draft", "pending_payment"])))
   return order
 }
 
