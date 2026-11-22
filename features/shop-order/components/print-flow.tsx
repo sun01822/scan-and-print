@@ -186,7 +186,10 @@ export function PrintFlow({ shop, maxUploadMb }: { shop: PublicShopView; maxUplo
 
       {/* With several files the payment card is far down; keep the total in reach. */}
       {!paymentVisible && ready.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 shadow-lg backdrop-blur">
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 shadow-lg backdrop-blur"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))", paddingTop: "0.75rem", paddingLeft: "0.75rem", paddingRight: "0.75rem" }}
+      >
           <div className="mx-auto flex max-w-md items-center justify-between gap-3">
             <div>
               <div className="text-xs text-muted-foreground">সব মিলিয়ে</div>
