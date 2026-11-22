@@ -123,6 +123,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ order: order.publicId, file: { id: job.id, pageCount: prepared.pageCount } })
   } catch (error) {
     await deleteFile(fileKey).catch(() => {})
+    // If we just created a fresh order and the PrintJob insert failed, delete the order so the
+    // consumed token sequence number isn't wasted on a document with no jobs.
+    if (!body.data.order && order) {
+      await Order.deleteOne({ _id: order._id }).catch(() => {})
+    }
     throw error
   }
 }
