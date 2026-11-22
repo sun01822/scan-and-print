@@ -31,6 +31,7 @@ export function OrdersTable({
   deviceName: (id: unknown) => string
 }) {
   return (
+    <div className="overflow-x-auto">
     <Table>
       <TableHeader>
         <TableRow>
@@ -131,5 +132,6 @@ export function OrdersTable({
         })}
       </TableBody>
     </Table>
+    </div>
   )
 }
