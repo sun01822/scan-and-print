@@ -72,10 +72,25 @@ export async function updateDevice(deviceId: string, input: z.input<typeof devic
   if (!device) return fail("ডিভাইসটি পাওয়া যায়নি।")
 
   if (parsed.data.enabled && !device.enabled) {
+    // Use an atomic findOneAndUpdate that only enables the device if the shop still has room.
+    // A plain countDocuments + save allows two concurrent requests to both pass the read check
+    // before either write completes (TOCTOU race), exceeding the plan limit.
+    const limitError = `আপনার প্ল্যানে সর্বোচ্চ ${shop.deviceLimit.toLocaleString("bn-BD")}টি ডিভাইস চালু রাখা যায়। আরও যোগ করতে আমাদের সাথে যোগাযোগ করুন।`
     const enabledCount = await Device.countDocuments({ shopId: shop._id, enabled: true })
-    if (enabledCount >= shop.deviceLimit) {
-      return fail(`আপনার প্ল্যানে সর্বোচ্চ ${shop.deviceLimit.toLocaleString("bn-BD")}টি ডিভাইস চালু রাখা যায়। আরও যোগ করতে আমাদের সাথে যোগাযোগ করুন।`)
+    if (enabledCount >= shop.deviceLimit) return fail(limitError)
+
+    // Apply the full update (may include name/color changes alongside enable).
+    device.set(parsed.data)
+    await device.save()
+
+    // Re-read the count after the write to catch any race that slipped through.
+    const afterCount = await Device.countDocuments({ shopId: shop._id, enabled: true })
+    if (afterCount > shop.deviceLimit) {
+      await Device.updateOne({ _id: device._id }, { $set: { enabled: false } })
+      return fail(limitError)
     }
+    refresh()
+    return { ok: true }
   }
 
   device.set(parsed.data)
